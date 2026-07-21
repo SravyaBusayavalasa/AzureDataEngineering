@@ -1,0 +1,305 @@
+{
+    "name": "pl_master_hospital",
+    "properties": {
+        "description": "Master ETL incremental ingestion and medallion execution pipeline for Healthcare Analytics.",
+        "activities": [
+            {
+                "name": "set_Execution_Timestamp",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "v_folder_timestamp",
+                    "value": {
+                        "value": "@formatDateTime(pipeline().TriggerTime, 'yyyy/MM/dd/HH/mm')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "lkp_get_table_watermark",
+                "type": "Lookup",
+                "dependsOn": [
+                    {
+                        "activity": "set_Execution_Timestamp",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "source": {
+                        "type": "SqlServerSource",
+                        "sqlReaderQuery": "SELECT source_schema, source_table, folder_name, watermark_column, last_load_value FROM dbo.watermark_table",
+                        "queryTimeout": "02:00:00",
+                        "partitionOption": "None"
+                    },
+                    "dataset": {
+                        "referenceName": "ds_onprem_sql_tables",
+                        "type": "DatasetReference"
+                    },
+                    "firstRowOnly": false
+                }
+            },
+            {
+                "name": "fe_table_items",
+                "type": "ForEach",
+                "dependsOn": [
+                    {
+                        "activity": "lkp_get_table_watermark",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@activity('lkp_get_table_watermark').output.value",
+                        "type": "Expression"
+                    },
+                    "isSequential": true,
+                    "activities": [
+                        {
+                            "name": "lkp_item_table",
+                            "type": "Lookup",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "@concat('SELECT MAX([', item().watermark_column, ']) AS max_wtrmrk_col_value FROM [', item().source_schema, '].[', item().source_table, ']')",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "partitionOption": "None"
+                                },
+                                "dataset": {
+                                    "referenceName": "ds_onprem_sql_tables",
+                                    "type": "DatasetReference"
+                                },
+                                "firstRowOnly": true
+                            }
+                        },
+                        {
+                            "name": "cp_item_table",
+                            "type": "Copy",
+                            "dependsOn": [
+                                {
+                                    "activity": "lkp_item_table",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "SqlServerSource",
+                                    "sqlReaderQuery": {
+                                        "value": "@concat('SELECT * FROM [', item().source_schema, '].[', item().source_table, '] WHERE [', item().watermark_column, '] > ''', item().last_load_value, ''' AND [', item().watermark_column, '] <= ''', activity('lkp_item_table').output.firstRow.max_wtrmrk_col_value, '''')",
+                                        "type": "Expression"
+                                    },
+                                    "queryTimeout": "02:00:00",
+                                    "partitionOption": "None"
+                                },
+                                "sink": {
+                                    "type": "DelimitedTextSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobFSWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "DelimitedTextWriteSettings",
+                                        "quoteAllText": true,
+                                        "fileExtension": ".csv"
+                                    }
+                                },
+                                "enableStaging": false,
+                                "translator": {
+                                    "type": "TabularTranslator",
+                                    "typeConversion": true,
+                                    "typeConversionSettings": {
+                                        "allowDataTruncation": true,
+                                        "treatBooleanAsNumber": false
+                                    }
+                                }
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "ds_onprem_sql_tables",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "schemaname": {
+                                            "value": "@item().source_schema",
+                                            "type": "Expression"
+                                        },
+                                        "tablename": {
+                                            "value": "@item().source_table",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "tables_data",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "ds_folder_name": {
+                                            "value": "@item().folder_name",
+                                            "type": "Expression"
+                                        },
+                                        "ds_file_name": {
+                                            "value": "@concat(variables('v_folder_timestamp'))",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "sp_update_watermark",
+                            "type": "SqlServerStoredProcedure",
+                            "dependsOn": [
+                                {
+                                    "activity": "cp_item_table",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "storedProcedureName": "[dbo].[usp_update_watermark_table]",
+                                "storedProcedureParameters": {
+                                    "lastloadvalue": {
+                                        "value": {
+                                            "value": "@activity('lkp_item_table').output.firstRow.max_wtrmrk_col_value",
+                                            "type": "Expression"
+                                        },
+                                        "type": "String"
+                                    },
+                                    "tablename": {
+                                        "value": {
+                                            "value": "@item().source_table",
+                                            "type": "Expression"
+                                        },
+                                        "type": "String"
+                                    },
+                                    "schemaname": {
+                                        "value": {
+                                            "value": "@item().source_schema",
+                                            "type": "Expression"
+                                        },
+                                        "type": "String"
+                                    }
+                                }
+                            },
+                            "linkedServiceName": {
+                                "referenceName": "ls_onprem_sqlserver",
+                                "type": "LinkedServiceReference"
+                            }
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "nb_Silver_Transformations",
+                "type": "DatabricksNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "fe_table_items",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "~/HospitalTransformations/Silver Transformations",
+                    "baseParameters": {
+                        "folder_path_param": {
+                            "value": "@variables('v_folder_timestamp')",
+                            "type": "Expression"
+                        }
+                    }
+                },
+                "linkedServiceName": {
+                    "referenceName": "ls_azure_databricks_workspace",
+                    "type": "LinkedServiceReference"
+                }
+            },
+            {
+                "name": "Orchestrate_Gold_Aggregations",
+                "type": "DatabricksNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "nb_Silver_Transformations",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebookPath": "~/HospitalTransformations/Gold Transformations"
+                },
+                "linkedServiceName": {
+                    "referenceName": "ls_azure_databricks_workspace",
+                    "type": "LinkedServiceReference"
+                }
+            }
+        ],
+        "variables": {
+            "v_folder_timestamp": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-07-21T09:00:00Z"
+    }
+}
