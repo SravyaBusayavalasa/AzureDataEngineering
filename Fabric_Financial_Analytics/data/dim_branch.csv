@@ -1,0 +1,6 @@
+branch_key,branch_code,branch_name,city,state,country,region,open_date,branch_type
+1,BR001,Hyderabad Main,Hyderabad,Telangana,India,South,2010-04-01,Urban
+2,BR002,Bengaluru Central,Bengaluru,Karnataka,India,South,2012-07-15,Urban
+3,BR003,Pune West,Pune,Maharashtra,India,West,2015-09-21,Urban
+4,BR004,Delhi North,Delhi,Delhi,India,North,2011-01-10,Urban
+5,BR005,Vizag Beach Road,Visakhapatnam,Andhra Pradesh,India,South,2018-03-05,Semi-Urban

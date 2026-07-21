@@ -1,0 +1,28 @@
+{
+    "name": "ds_Rest_Resource",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "ls_rest_api",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "RelativeURL": {
+                "type": "string"
+            },
+            "BaseURL": {
+                "type": "string",
+                "defaultValue": "https://jsonplaceholder.typicode.com/"
+            }
+        },
+        "annotations": [],
+        "type": "RestResource",
+        "typeProperties": {
+            "relativeUrl": {
+                "value": "@dataset().RelativeURL",
+                "type": "Expression"
+            }
+        },
+        "schema": []
+    },
+    "type": "Microsoft.Synapse/workspaces/datasets"
+}

@@ -1,0 +1,8 @@
+[
+  { "RelativeURL": "posts", "TargetFile": "posts", "TargetTable": "Gold_Social_Posts"},
+  { "RelativeURL": "comments", "TargetFile": "comments", "TargetTable":"Gold_Social_Comments" },
+  { "RelativeURL": "users", "TargetFile": "users", "TargetTable":"Gold_Social_Users" },
+  { "RelativeURL": "albums", "TargetFile": "albums", "TargetTable":"Gold_Social_Albums" },
+  { "RelativeURL": "todos", "TargetFile": "todos", "TargetTable":"Gold_Social_Todos" },
+  { "RelativeURL": "photos", "TargetFile": "photos", "TargetTable":"Gold_Social_Photos" }
+]

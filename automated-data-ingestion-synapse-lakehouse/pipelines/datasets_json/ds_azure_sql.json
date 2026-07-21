@@ -1,0 +1,32 @@
+{
+    "name": "ds_azure_sql",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "ls_azure_sql",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "p_schemaName": {
+                "type": "string",
+                "defaultValue": "dbo"
+            },
+            "p_tableName": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "type": "AzureSqlTable",
+        "schema": [],
+        "typeProperties": {
+            "schema": {
+                "value": "@dataset().p_schemaName",
+                "type": "Expression"
+            },
+            "table": {
+                "value": "@dataset().p_tableName",
+                "type": "Expression"
+            }
+        }
+    },
+    "type": "Microsoft.Synapse/workspaces/datasets"
+}

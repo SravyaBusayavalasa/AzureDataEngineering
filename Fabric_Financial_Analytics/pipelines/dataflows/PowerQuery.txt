@@ -1,0 +1,16 @@
+let
+  Source = Lakehouse.Contents(null),
+  Navigation = Source{[workspaceId = "a0880641-7503-4495-9b50-2e592fa7362a"]}[Data],
+  #"Navigation 1" = Navigation{[lakehouseId = "b787b2ed-5803-4de7-adc3-7dad54e00582"]}[Data],
+  #"Navigation 2" = #"Navigation 1"{[Id = "Files", ItemKind = "Folder"]}[Data],
+  #"Navigation 3" = #"Navigation 2"{[Name = "bankdata-fact"]}[Content],
+  #"Navigation 4" = #"Navigation 3"{[Name = "fact_daily_account_balance.csv"]}[Content],
+  #"Imported CSV" = Csv.Document(#"Navigation 4", [Delimiter = ",", Columns = 10, QuoteStyle = QuoteStyle.None]),
+  #"Promoted headers" = Table.PromoteHeaders(#"Imported CSV", [PromoteAllScalars = true]),
+  #"Changed column type" = Table.TransformColumnTypes(#"Promoted headers", {{"date_key", Int64.Type}, {"account_key", Int64.Type}, {"customer_key", Int64.Type}, {"branch_key", Int64.Type}, {"product_key", Int64.Type}, {"opening_balance", type number}, {"debit_amount", type number}, {"credit_amount", type number}, {"closing_balance", type number}, {"transaction_count", Int64.Type}}),
+  #"Marked key columns" = Table.AddKey(#"Changed column type", {"date_key", "account_key", "customer_key", "branch_key", "product_key"}, false),
+  #"Added custom" = Table.TransformColumnTypes(Table.AddColumn(#"Marked key columns", "Is_Balance_Valid", each [closing_balance] = [opening_balance] + [credit_amount] - [debit_amount]), {{"Is_Balance_Valid", type logical}}),
+  #"Filtered rows" = Table.SelectRows(#"Added custom", each [product_key] <> null and [product_key] <> null and [branch_key] <> null and [branch_key] <> null and [customer_key] <> null and [customer_key] <> null and [account_key] <> null and [account_key] <> null and [date_key] <> null and [date_key] <> null and [Is_Balance_Valid] = true),
+  #"Removed duplicates" = Table.Distinct(#"Filtered rows", {"date_key", "account_key", "customer_key", "branch_key", "product_key"})
+in
+  #"Removed duplicates"

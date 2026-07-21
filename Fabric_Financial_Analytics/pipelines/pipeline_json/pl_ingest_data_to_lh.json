@@ -1,0 +1,237 @@
+{
+    "name": "pl_ingest_data_to_lh",
+    "objectId": "222a971a-a1f7-45c8-85e9-68d7e29b5bf4",
+    "properties": {
+        "activities": [
+            {
+                "name": "copy2adls",
+                "type": "Copy",
+                "dependsOn": [
+                    {
+                        "activity": "Current Date",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "source": {
+                        "type": "DelimitedTextSource",
+                        "storeSettings": {
+                            "type": "FileServerReadSettings",
+                            "recursive": true,
+                            "enablePartitionDiscovery": false
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextReadSettings"
+                        },
+                        "datasetSettings": {
+                            "annotations": [],
+                            "type": "DelimitedText",
+                            "typeProperties": {
+                                "location": {
+                                    "type": "FileServerLocation",
+                                    "folderPath": "files"
+                                },
+                                "columnDelimiter": ",",
+                                "escapeChar": "\\",
+                                "firstRowAsHeader": true,
+                                "quoteChar": "\""
+                            },
+                            "schema": [],
+                            "externalReferences": {
+                                "connection": "d524e6ce-75c2-41b8-a9a1-e1f30f25d447"
+                            }
+                        }
+                    },
+                    "sink": {
+                        "type": "DelimitedTextSink",
+                        "storeSettings": {
+                            "type": "AzureBlobStorageWriteSettings"
+                        },
+                        "formatSettings": {
+                            "type": "DelimitedTextWriteSettings",
+                            "fileExtension": ".txt"
+                        },
+                        "datasetSettings": {
+                            "annotations": [],
+                            "linkedService": {
+                                "name": "lh_fabric",
+                                "properties": {
+                                    "annotations": [],
+                                    "type": "Lakehouse",
+                                    "typeProperties": {
+                                        "workspaceId": "a0880641-7503-4495-9b50-2e592fa7362a",
+                                        "artifactId": "b787b2ed-5803-4de7-adc3-7dad54e00582",
+                                        "rootFolder": "Files"
+                                    }
+                                }
+                            },
+                            "type": "DelimitedText",
+                            "typeProperties": {
+                                "location": {
+                                    "type": "LakehouseLocation",
+                                    "folderPath": "bankdata-dim"
+                                },
+                                "columnDelimiter": ",",
+                                "escapeChar": "\\",
+                                "firstRowAsHeader": true,
+                                "quoteChar": "\""
+                            },
+                            "schema": []
+                        }
+                    },
+                    "enableStaging": false,
+                    "translator": {
+                        "type": "TabularTranslator",
+                        "typeConversion": true,
+                        "typeConversionSettings": {
+                            "allowDataTruncation": true,
+                            "treatBooleanAsNumber": false
+                        }
+                    }
+                }
+            },
+            {
+                "name": "nb_dim_cleanse",
+                "type": "TridentNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "copy2adls",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "notebookId": "004ca39a-85e1-4ca5-80ca-93462034813e",
+                    "workspaceId": "a0880641-7503-4495-9b50-2e592fa7362a"
+                }
+            },
+            {
+                "name": "Dataflow1",
+                "type": "RefreshDataflow",
+                "dependsOn": [
+                    {
+                        "activity": "nb_dim_cleanse",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "dataflowId": "b48e09da-e045-4508-a5da-6f96ed794117",
+                    "workspaceId": "a0880641-7503-4495-9b50-2e592fa7362a",
+                    "notifyOption": "NoNotification",
+                    "dataflowType": "DataflowFabric",
+                    "executeMashupQueriesOnly": true
+                }
+            },
+            {
+                "name": "nb_create_gold_fact",
+                "type": "TridentNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "Dataflow1",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "notebookId": "626e5c25-35be-470e-86ab-7fe49c377d8b",
+                    "workspaceId": "a0880641-7503-4495-9b50-2e592fa7362a"
+                }
+            },
+            {
+                "name": "Current Date",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "variableName": "current date",
+                    "value": {
+                        "value": "@formatDateTime(pipeline().TriggerTime,'yyyy-mm-dd')",
+                        "type": "Expression"
+                    }
+                }
+            },
+            {
+                "name": "Office365Email1",
+                "type": "Office365Email",
+                "state": "Inactive",
+                "onInactiveMarkAs": "Succeeded",
+                "dependsOn": [
+                    {
+                        "activity": "nb_create_gold_fact",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "typeProperties": {
+                    "to": "bsravya4@gmail.com",
+                    "subject": "Pipeline success",
+                    "body": "<p>@{pipeline().RunId} was successful on @{variables('current date')}</p>"
+                },
+                "externalReferences": {
+                    "connection": "4ebc04b7-2f3f-494a-9845-57b31209987e"
+                }
+            }
+        ],
+        "variables": {
+            "current date": {
+                "type": "String"
+            }
+        },
+        "lastModifiedByObjectId": "f1da3790-99bd-423e-a9cd-a2d668d718d9",
+        "lastPublishTime": "2026-07-03T22:15:53Z",
+        "logicAppsConnectionPayload": {
+            "id": "/subscriptions/a59452ee-4fbd-4619-ab77-b12314f6ae59/resourceGroups/connections-a0880641-7503-4495-9b50-2e592fa7362a/providers/Microsoft.Web/connections/1_222a971a-a1f7-45c8-85e9-68d7e29b5bf4_f1da3790-99bd-423e-a9cd-a2d668d718d9",
+            "properties": {
+                "api": {
+                    "name": "office365",
+                    "id": "/subscriptions/a59452ee-4fbd-4619-ab77-b12314f6ae59/providers/Microsoft.Web/locations/centralus/managedApis/office365"
+                }
+            }
+        }
+    }
+}

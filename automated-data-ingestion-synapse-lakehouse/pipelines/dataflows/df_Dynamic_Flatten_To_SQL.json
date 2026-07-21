@@ -1,0 +1,96 @@
+{
+    "name": "df_Dynamic_Flatten_To_SQL",
+    "properties": {
+        "type": "MappingDataFlow",
+        "typeProperties": {
+            "sources": [
+                {
+                    "linkedService": {
+                        "referenceName": "ls_adls_gen2",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "srcJson"
+                }
+            ],
+            "sinks": [
+                {
+                    "linkedService": {
+                        "referenceName": "ls_azure_sql",
+                        "type": "LinkedServiceReference"
+                    },
+                    "name": "snkDB"
+                }
+            ],
+            "transformations": [
+                {
+                    "name": "selJSONColumns"
+                },
+                {
+                    "name": "drvColumns"
+                }
+            ],
+            "scriptLines": [
+                "source(output(",
+                "          address as (city as string, geo as (lat as double, lng as double), street as string, suite as string, zipcode as string),",
+                "          company as (bs as string, catchPhrase as string, name as string),",
+                "          email as string,",
+                "          id as short,",
+                "          name as string,",
+                "          phone as string,",
+                "          username as string,",
+                "          website as string",
+                "     ),",
+                "     useSchema: false,",
+                "     allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     limit: 100,",
+                "     ignoreNoFilesFound: false,",
+                "     format: 'json',",
+                "     fileSystem: 'restapi-data',",
+                "     fileName: 'users',",
+                "     documentForm: 'documentPerLine') ~> srcJson",
+                "drvColumns select(mapColumn(",
+                "          geoLat,",
+                "          geoLng,",
+                "          street,",
+                "          city,",
+                "          suite,",
+                "          phone,",
+                "          username,",
+                "          zipcode,",
+                "          website,",
+                "          companyName,",
+                "          companyCatchPhrase,",
+                "          companyBs,",
+                "          id,",
+                "          name,",
+                "          email",
+                "     ),",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true) ~> selJSONColumns",
+                "srcJson derive(geoLat = address.geo.lat,",
+                "          geoLng = address.geo.lng,",
+                "          street = address.street,",
+                "          city = address.city,",
+                "          suite = address.suite,",
+                "          zipcode = address.zipcode,",
+                "          companyName = company.name,",
+                "          companyCatchPhrase = company.catchPhrase,",
+                "          companyBs = company.bs) ~> drvColumns",
+                "selJSONColumns sink(allowSchemaDrift: true,",
+                "     validateSchema: false,",
+                "     format: 'table',",
+                "     store: 'sqlserver',",
+                "     schemaName: 'dbo',",
+                "     tableName: ($tableName),",
+                "     insertable: true,",
+                "     updateable: false,",
+                "     deletable: false,",
+                "     upsertable: false,",
+                "     skipDuplicateMapInputs: true,",
+                "     skipDuplicateMapOutputs: true,",
+                "     errorHandlingOption: 'stopOnFirstError') ~> snkDB"
+            ]
+        }
+    }
+}

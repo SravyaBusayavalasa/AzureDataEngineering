@@ -1,0 +1,6 @@
+employee_key,employee_id,employee_name,branch_key,role,hire_date,status
+1,EMP001,Sanjay Kumar,1,Branch Manager,2016-03-01,Active
+2,EMP002,Lakshmi Devi,2,Relationship Manager,2018-09-20,Active
+3,EMP003,Rahul Bose,3,Credit Officer,2019-01-15,Active
+4,EMP004,Farah Ali,4,Teller,2021-05-10,Active
+5,EMP005,Arun Prakash,5,Operations Executive,2020-10-05,Active

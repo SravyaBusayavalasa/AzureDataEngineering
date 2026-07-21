@@ -1,0 +1,131 @@
+{
+    "name": "pl_nyctaxi_dataingestion",
+    "properties": {
+        "activities": [
+            {
+                "name": "feMonths",
+                "type": "ForEach",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@pipeline().parameters.months",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "Copyhttp2adls",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "BinarySource",
+                                    "storeSettings": {
+                                        "type": "HttpReadSettings",
+                                        "requestMethod": "GET"
+                                    },
+                                    "formatSettings": {
+                                        "type": "BinaryReadSettings"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "BinarySink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobStorageWriteSettings"
+                                    }
+                                },
+                                "enableStaging": false
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "ds_http_binary",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "p_url": {
+                                            "value": "@concat('trip-data/', pipeline().parameters.taxi_type, '_tripdata_',pipeline().parameters.year,'-',item(), '.parquet')",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "ds_adls_binary",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "p_filename": {
+                                            "value": "@concat(pipeline().parameters.taxi_type, '_tripdata_2026-', item(), '.parquet')",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "nb_taxi_delta",
+                "description": "partitioned by year and month",
+                "type": "SynapseNotebook",
+                "dependsOn": [
+                    {
+                        "activity": "feMonths",
+                        "dependencyConditions": [
+                            "Succeeded"
+                        ]
+                    }
+                ],
+                "policy": {
+                    "timeout": "0.12:00:00",
+                    "retry": 0,
+                    "retryIntervalInSeconds": 30,
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "notebook": {
+                        "referenceName": "nb_spark_delta",
+                        "type": "NotebookReference"
+                    },
+                    "snapshot": true,
+                    "sparkPool": {
+                        "referenceName": "pool2use",
+                        "type": "BigDataPoolReference"
+                    }
+                }
+            }
+        ],
+        "parameters": {
+            "year": {
+                "type": "string",
+                "defaultValue": "2026"
+            },
+            "taxi_type": {
+                "type": "string",
+                "defaultValue": "yellow"
+            },
+            "months": {
+                "type": "array",
+                "defaultValue": [
+                    "01",
+                    "02",
+                    "03",
+                    "04"
+                ]
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-06-26T20:34:01Z"
+    },
+    "type": "Microsoft.Synapse/workspaces/pipelines"
+}

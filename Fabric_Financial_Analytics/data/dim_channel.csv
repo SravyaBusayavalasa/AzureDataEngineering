@@ -1,0 +1,7 @@
+channel_key,channel_code,channel_name,channel_type,is_digital
+1,ATM,ATM,Self Service,N
+2,MB,Mobile Banking,Digital,Y
+3,IB,Internet Banking,Digital,Y
+4,BR,Branch Teller,Branch,N
+5,POS,Point of Sale,Merchant,Y
+6,UPI,UPI,Digital,Y

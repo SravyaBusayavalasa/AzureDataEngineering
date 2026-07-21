@@ -1,0 +1,206 @@
+{
+    "name": "pl_restAPI_Ingestion",
+    "properties": {
+        "activities": [
+            {
+                "name": "set_Endpoint_Url",
+                "type": "SetVariable",
+                "dependsOn": [],
+                "policy": {
+                    "secureOutput": false,
+                    "secureInput": false
+                },
+                "userProperties": [],
+                "typeProperties": {
+                    "variableName": "v_API_Endpoint",
+                    "value": "https://jsonplaceholder.typicode.com/"
+                }
+            },
+            {
+                "name": "ForEachJson",
+                "type": "ForEach",
+                "dependsOn": [],
+                "userProperties": [],
+                "typeProperties": {
+                    "items": {
+                        "value": "@json('[\n  { \"RelativeURL\": \"posts\", \"TargetFile\": \"posts\", \"TargetTable\": \"Gold_Social_Posts\"},\n  { \"RelativeURL\": \"comments\", \"TargetFile\": \"comments\", \"TargetTable\":\"Gold_Social_Comments\" },\n  { \"RelativeURL\": \"users\", \"TargetFile\": \"users\", \"TargetTable\":\"Gold_Social_Users\" },\n  { \"RelativeURL\": \"albums\", \"TargetFile\": \"albums\", \"TargetTable\":\"Gold_Social_Albums\" },\n  { \"RelativeURL\": \"todos\", \"TargetFile\": \"todos\", \"TargetTable\":\"Gold_Social_Todos\" },\n  { \"RelativeURL\": \"photos\", \"TargetFile\": \"photos\", \"TargetTable\":\"Gold_Social_Photos\" }\n]\n')",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "Copyrest2adls",
+                            "type": "Copy",
+                            "dependsOn": [],
+                            "policy": {
+                                "timeout": "0.12:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false,
+                                "secureInput": false
+                            },
+                            "userProperties": [],
+                            "typeProperties": {
+                                "source": {
+                                    "type": "RestSource",
+                                    "httpRequestTimeout": "00:01:40",
+                                    "requestInterval": "00.00:00:00.010",
+                                    "requestMethod": "GET",
+                                    "paginationRules": {
+                                        "supportRFC5988": "true"
+                                    }
+                                },
+                                "sink": {
+                                    "type": "JsonSink",
+                                    "storeSettings": {
+                                        "type": "AzureBlobStorageWriteSettings"
+                                    },
+                                    "formatSettings": {
+                                        "type": "JsonWriteSettings"
+                                    }
+                                },
+                                "enableStaging": false
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "ds_Rest_Resource",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "RelativeURL": {
+                                            "value": "@item().RelativeURL",
+                                            "type": "Expression"
+                                        },
+                                        "BaseURL": "https://jsonplaceholder.typicode.com/"
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "ds_adls_gen2",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "p_file_name": {
+                                            "value": "@item().TargetFile",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        },
+                        {
+                            "name": "If Users",
+                            "type": "IfCondition",
+                            "dependsOn": [
+                                {
+                                    "activity": "Copyrest2adls",
+                                    "dependencyConditions": [
+                                        "Succeeded"
+                                    ]
+                                }
+                            ],
+                            "userProperties": [],
+                            "typeProperties": {
+                                "expression": {
+                                    "value": "@equals(toLower(item().TargetTable) , 'users')",
+                                    "type": "Expression"
+                                },
+                                "ifFalseActivities": [
+                                    {
+                                        "name": "Copy data1",
+                                        "type": "Copy",
+                                        "dependsOn": [],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "source": {
+                                                "type": "JsonSource",
+                                                "storeSettings": {
+                                                    "type": "AzureBlobStorageReadSettings",
+                                                    "recursive": true,
+                                                    "enablePartitionDiscovery": false
+                                                },
+                                                "formatSettings": {
+                                                    "type": "JsonReadSettings"
+                                                }
+                                            },
+                                            "sink": {
+                                                "type": "AzureSqlSink",
+                                                "writeBehavior": "insert",
+                                                "sqlWriterUseTableLock": false
+                                            },
+                                            "enableStaging": false
+                                        },
+                                        "inputs": [
+                                            {
+                                                "referenceName": "ds_adls_gen2",
+                                                "type": "DatasetReference",
+                                                "parameters": {
+                                                    "p_file_name": {
+                                                        "value": "@item().TargetFile",
+                                                        "type": "Expression"
+                                                    }
+                                                }
+                                            }
+                                        ],
+                                        "outputs": [
+                                            {
+                                                "referenceName": "ds_azure_sql",
+                                                "type": "DatasetReference",
+                                                "parameters": {
+                                                    "p_schemaName": "dbo",
+                                                    "p_tableName": {
+                                                        "value": "@item().TargetTable",
+                                                        "type": "Expression"
+                                                    }
+                                                }
+                                            }
+                                        ]
+                                    }
+                                ],
+                                "ifTrueActivities": [
+                                    {
+                                        "name": "df_users_2_db",
+                                        "type": "ExecuteDataFlow",
+                                        "dependsOn": [],
+                                        "policy": {
+                                            "timeout": "0.12:00:00",
+                                            "retry": 0,
+                                            "retryIntervalInSeconds": 30,
+                                            "secureOutput": false,
+                                            "secureInput": false
+                                        },
+                                        "userProperties": [],
+                                        "typeProperties": {
+                                            "dataflow": {
+                                                "referenceName": "df_Dynamic_Flatten_To_SQL",
+                                                "type": "DataFlowReference"
+                                            },
+                                            "compute": {
+                                                "coreCount": 8,
+                                                "computeType": "General"
+                                            },
+                                            "traceLevel": "Coarse"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                }
+            }
+        ],
+        "variables": {
+            "v_API_Endpoint": {
+                "type": "String"
+            }
+        },
+        "annotations": [],
+        "lastPublishTime": "2026-06-26T15:40:16Z"
+    },
+    "type": "Microsoft.Synapse/workspaces/pipelines"
+}

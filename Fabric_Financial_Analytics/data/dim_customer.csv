@@ -1,0 +1,11 @@
+customer_key,customer_id,full_name,gender,date_of_birth,city,state,customer_segment,kyc_status,onboard_date
+1,CUST0001,Aarav Sharma,M,1988-05-14,Hyderabad,Telangana,Mass,Verified,2021-02-15
+2,CUST0002,Diya Reddy,F,1992-11-23,Bengaluru,Karnataka,Affluent,Verified,2020-06-09
+3,CUST0003,Rohan Mehta,M,1979-03-02,Pune,Maharashtra,Premium,Verified,2019-10-11
+4,CUST0004,Anika Gupta,F,1995-08-19,Delhi,Delhi,Mass,Verified,2022-01-28
+5,CUST0005,Vikram Nair,M,1984-12-30,Bengaluru,Karnataka,Affluent,Verified,2021-09-13
+6,CUST0006,Meera Iyer,F,1990-02-07,Hyderabad,Telangana,Premium,Verified,2018-04-22
+7,CUST0007,Kabir Khan,M,1998-06-12,Delhi,Delhi,Mass,Pending,2024-03-16
+8,CUST0008,Neha Patil,F,1987-09-25,Pune,Maharashtra,Affluent,Verified,2020-12-04
+9,CUST0009,Suresh Rao,M,1975-04-18,Visakhapatnam,Andhra Pradesh,Mass,Verified,2017-08-01
+10,CUST0010,Priya Menon,F,1993-01-05,Visakhapatnam,Andhra Pradesh,Premium,Verified,2023-07-20

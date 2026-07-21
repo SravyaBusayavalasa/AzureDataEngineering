@@ -1,0 +1,27 @@
+{
+    "name": "ds_adls_binary",
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "ls_adls_bin",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "p_filename": {
+                "type": "string"
+            }
+        },
+        "annotations": [],
+        "type": "Binary",
+        "typeProperties": {
+            "location": {
+                "type": "AzureBlobStorageLocation",
+                "fileName": {
+                    "value": "@dataset().p_filename",
+                    "type": "Expression"
+                },
+                "container": "nyc-taxi-data"
+            }
+        }
+    },
+    "type": "Microsoft.Synapse/workspaces/datasets"
+}
