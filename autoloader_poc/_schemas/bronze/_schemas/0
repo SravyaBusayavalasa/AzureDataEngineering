@@ -1,0 +1,2 @@
+v1
+{"dataSchemaJson":"{\"type\":\"struct\",\"fields\":[{\"name\":\"device_id\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}},{\"name\":\"temp\",\"type\":\"double\",\"nullable\":true,\"metadata\":{}},{\"name\":\"timestamp\",\"type\":\"string\",\"nullable\":true,\"metadata\":{}}]}","partitionSchemaJson":"{\"type\":\"struct\",\"fields\":[]}"}
